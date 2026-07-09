@@ -1,10 +1,20 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Auth\AuthController;
 
-Route::get('/test', function () {
-    return response()->json([
-        'success' => true,
-        'message' => 'Camela Backend API is working!'
-    ]);
+Route::prefix('auth')->group(function () {
+
+    Route::post('/login', [AuthController::class, 'login']);
+
+    Route::post('/register', [AuthController::class, 'register']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+
+        Route::get('/me', [AuthController::class, 'me']);
+
+        Route::post('/logout', [AuthController::class, 'logout']);
+
+    });
+
 });
