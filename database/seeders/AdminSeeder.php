@@ -13,6 +13,7 @@ class AdminSeeder extends Seeder
         User::create([
             'role_id' => 1,
             'name' => 'System Administrator',
+            'username' => 'admin',
             'email' => 'admin@camela.com',
             'password' => 'Admin@123',
         ]);

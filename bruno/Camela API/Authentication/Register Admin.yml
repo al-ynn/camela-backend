@@ -1,0 +1,25 @@
+info:
+  name: Register Admin
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://127.0.0.1:8000/api/auth/register
+  body:
+    type: json
+    data: |-
+      {
+          "name": "Admin one",
+          "username": "admin1",
+          "email": "admin1@example.com",
+          "password": "password",
+          "password_confirmation": "password"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

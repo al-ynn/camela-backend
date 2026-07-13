@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+        'hitpay' => [
+
+        'api_key' => env('HITPAY_API_KEY'),
+
+        'salt' => env('HITPAY_WEBHOOK_SALT'),
+
+        'base_url' => env(
+            'HITPAY_BASE_URL',
+            'https://api.sandbox.hit-pay.com'
+        ),
+
+    ],
+
 ];

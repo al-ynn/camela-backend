@@ -1,0 +1,21 @@
+info:
+  name: Update status
+  type: http
+  seq: 1
+
+http:
+  method: PATCH
+  url: http://127.0.0.1:8000/api/admin/orders/{id}
+  body:
+    type: json
+    data: |-
+      {
+          "order_status":"PROCESSING"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
