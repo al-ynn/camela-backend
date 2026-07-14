@@ -46,7 +46,11 @@ class ProductResource extends JsonResource
 
             'id' => $this->id,
 
+            'category_id' => $this->category_id,
+
             'title' => $this->title,
+
+            'sku' => $this->sku,
 
             'price' => (float) $this->price,
 
@@ -55,6 +59,8 @@ class ProductResource extends JsonResource
                 : null,
 
             'category' => optional($this->category)->name,
+            'category_slug' => optional($this->category)->slug,
+            'category_landing_page' => optional($this->category)->landing_page,
 
             'description' => $this->description,
 
@@ -75,20 +81,6 @@ class ProductResource extends JsonResource
             'image' => $primaryImage,
 
             'images' => $images,
-
-            /*
-            |--------------------------------------------------------------------------
-            | Placeholder until Review Module exists
-            |--------------------------------------------------------------------------
-            */
-
-            'rating' => [
-
-                'rate' => 5,
-
-                'count' => 0,
-
-            ],
 
         ];
     }

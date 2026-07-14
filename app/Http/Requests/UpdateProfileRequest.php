@@ -48,6 +48,8 @@ class UpdateProfileRequest extends FormRequest
 
             ],
 
+            'phone' => ['nullable', 'string', 'max:30'],
+
         ];
     }
 }

@@ -18,6 +18,8 @@ class DashboardService
 
             'revenue' => $this->revenue(),
 
+            'weekly_revenue' => $this->weeklyRevenue(),
+
             'categories' => $this->categories(),
 
             'recent_orders' => $this->recentOrders(),
@@ -96,10 +98,17 @@ class DashboardService
 
     private function revenue()
     {
+        $customers = User::selectRaw(
+                'MONTH(created_at) as month, COUNT(*) as customers'
+            )
+            ->groupByRaw('MONTH(created_at)')
+            ->pluck('customers', 'month');
+
         return Order::selectRaw(
 
                 'MONTH(created_at) as month,
-                 SUM(grand_total) as revenue'
+                 SUM(grand_total) as revenue,
+                 COUNT(*) as orders'
 
             )
             ->groupByRaw('MONTH(created_at)')
@@ -111,7 +120,11 @@ class DashboardService
 
                     'month'=>$row->month,
 
-                    'revenue'=>(float)$row->revenue
+                    'revenue'=>(float)$row->revenue,
+
+                    'orders'=>(int)$row->orders,
+
+                    'customers'=>(int) ($customers[$row->month] ?? 0)
 
                 ];
 
@@ -138,6 +151,30 @@ class DashboardService
 
                 ];
 
+            });
+    }
+
+    private function weeklyRevenue()
+    {
+        $customers = User::selectRaw(
+                'DATE(created_at) as date, COUNT(*) as customers'
+            )
+            ->groupByRaw('DATE(created_at)')
+            ->pluck('customers', 'date');
+
+        return Order::selectRaw(
+                'DATE(created_at) as date, SUM(grand_total) as revenue, COUNT(*) as orders'
+            )
+            ->groupByRaw('DATE(created_at)')
+            ->orderByRaw('DATE(created_at)')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'month' => $row->date,
+                    'revenue' => (float) $row->revenue,
+                    'orders' => (int) $row->orders,
+                    'customers' => (int) ($customers[$row->date] ?? 0),
+                ];
             });
     }
 

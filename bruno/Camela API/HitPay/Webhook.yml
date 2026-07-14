@@ -1,6 +1,7 @@
 info:
   name: Webhook
   type: http
+  seq: 1
 
 http:
   method: POST

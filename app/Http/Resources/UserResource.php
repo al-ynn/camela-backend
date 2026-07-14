@@ -9,8 +9,6 @@ class UserResource extends JsonResource
 {
     public function toArray($request): array
     {
-        $parts = explode(' ', trim($this->name), 2);
-
         return [
 
             'id' => $this->id,
@@ -25,13 +23,9 @@ class UserResource extends JsonResource
 
             'role_id' => $this->role_id,
 
-            'name' => [
+            'is_admin' => $this->role?->name === 'ADMIN',
 
-                'firstname' => $parts[0] ?? '',
-
-                'lastname' => $parts[1] ?? '',
-
-            ],
+            'name' => $this->name,
 
         ];
     }

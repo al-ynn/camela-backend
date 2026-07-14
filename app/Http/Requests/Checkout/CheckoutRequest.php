@@ -42,21 +42,9 @@ class CheckoutRequest extends FormRequest
             |--------------------------------------------------------------------------
             */
 
-            'shipping_address_id' => [
+            'shipping_address_id' => ['nullable', 'integer', Rule::exists('addresses', 'id')->where('user_id', $this->user()->id)],
 
-                'nullable',
-
-                'integer'
-
-            ],
-
-            'billing_address_id' => [
-
-                'nullable',
-
-                'integer'
-
-            ],
+            'billing_address_id' => ['nullable', 'integer', Rule::exists('addresses', 'id')->where('user_id', $this->user()->id)],
 
             'notes' => [
 

@@ -6,6 +6,11 @@ info:
 http:
   method: POST
   url: http://127.0.0.1:8000/api/cart
+  headers:
+    - name: Authorization
+      value: Bearer 2|VHqDQR1Ncn4D8HNvDUUq3XGIHGBFLBkQL4YOOetf88053215
+    - name: Accept
+      value: application/json
   body:
     type: json
     data: |-

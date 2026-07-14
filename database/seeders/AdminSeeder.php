@@ -2,20 +2,28 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class AdminSeeder extends Seeder
-
 {
     public function run(): void
     {
-        User::create([
-            'role_id' => 1,
-            'name' => 'System Administrator',
-            'username' => 'admin',
-            'email' => 'admin@camela.com',
-            'password' => 'Admin@123',
-        ]);
+        $adminRoleId = Role::where('name', 'ADMIN')->value('id');
+
+        if (!$adminRoleId) {
+            return;
+        }
+
+        User::updateOrCreate(
+            ['email' => 'admin1@example.com'],
+            [
+                'role_id' => $adminRoleId,
+                'name' => 'Admin One',
+                'username' => 'admin1',
+                'password' => 'password',
+            ]
+        );
     }
 }

@@ -30,6 +30,10 @@ class Order extends Model
 
         'payment_method',
 
+        'shipping_address_id',
+
+        'billing_address_id',
+
         'payment_reference',
 
         'paid_at',

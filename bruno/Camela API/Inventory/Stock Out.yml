@@ -4,8 +4,8 @@ info:
   seq: 1
 
 http:
-  method: POST
-  url: http://127.0.0.1:8000/api/admin/products/1/inventory
+  method: GET
+  url: http://127.0.0.1:8000/api/admin/products/1
   body:
     type: json
     data: |-
@@ -21,3 +21,4 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+​

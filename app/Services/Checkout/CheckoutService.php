@@ -4,6 +4,7 @@ namespace App\Services\Checkout;
 
 use App\Models\Order;
 use App\Models\User;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use App\Services\Inventory\InventoryService;
 use App\Services\Cart\CartService;
@@ -19,9 +20,9 @@ class CheckoutService
 
     ) {}
 
-    public function checkout(User $user): Order
+    public function checkout(User $user, string $paymentMethod, ?int $shippingAddressId = null, ?int $billingAddressId = null): Order
     {
-        return DB::transaction(function () use ($user) {
+        return DB::transaction(function () use ($user, $paymentMethod, $shippingAddressId, $billingAddressId) {
 
             // Load customer's cart
             $items = $user
@@ -29,11 +30,11 @@ class CheckoutService
                 ->with('product')
                 ->get();
 
-            // Cart must not be empty
             if ($items->isEmpty()) {
-
-                throw new \Exception(
-                    'Cart is empty.'
+                throw new HttpResponseException(
+                    response()->json([
+                        'message' => 'Cart is empty.',
+                    ], 422)
                 );
 
             }
@@ -53,7 +54,6 @@ class CheckoutService
 
             }
 
-            // Calculate totals
             $subtotal = $items->sum(function ($item) {
 
                 return $item->quantity * $item->product->price;
@@ -76,7 +76,6 @@ class CheckoutService
 
                 - $discount;
 
-            // Create Order
             $order = Order::create([
 
                 'user_id' => $user->id,
@@ -97,9 +96,49 @@ class CheckoutService
 
                 'order_status' => 'PENDING',
 
-            
+                'payment_method' => $paymentMethod,
+                'shipping_address_id' => $shippingAddressId,
+                'billing_address_id' => $billingAddressId,
 
             ]);
+
+            foreach ($items as $item) {
+
+                OrderItem::create([
+
+                    'order_id' => $order->id,
+
+                    'product_id' => $item->product_id,
+
+                    'quantity' => $item->quantity,
+
+                    'price' => $item->product->price,
+
+                    'subtotal' =>
+
+                        $item->quantity
+
+                        * $item->product->price,
+
+                ]);
+
+                $this->inventoryService->adjustStock(
+
+                    $item->product,
+
+                    'STOCK_OUT',
+
+                    $item->quantity,
+
+                    $user,
+
+                    "Order {$order->order_number}"
+
+                );
+
+            }
+
+            $this->cartService->clear($user);
 
             return $order->load([
 
@@ -107,47 +146,9 @@ class CheckoutService
 
                 'user',
 
-            ]); 
-
-        });
-
-        foreach ($items as $item) {
-
-            OrderItem::create([
-
-                'order_id' => $order->id,
-
-                'product_id' => $item->product_id,
-
-                'quantity' => $item->quantity,
-
-                'price' => $item->product->price,
-
-                'subtotal' =>
-
-                    $item->quantity
-
-                    * $item->product->price,
-
             ]);
 
-            $this->inventoryService->adjustStock(
-
-                $item->product,
-
-                'STOCK_OUT',
-
-                $item->quantity,
-
-                $user,
-
-                "Order {$order->order_number}"
-
-            );
-
-            $this->cartService->clear($user);
-
-        }
+        });
     }
 
     private function generateOrderNumber(): string

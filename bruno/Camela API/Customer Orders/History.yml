@@ -5,7 +5,12 @@ info:
 
 http:
   method: GET
-  url: http://127.0.0.1:8000/api/orders/{id}
+  url: http://127.0.0.1:8000/api/orders
+  headers:
+    - name: Authorization
+      value: Bearer 2|VHqDQR1Ncn4D8HNvDUUq3XGIHGBFLBkQL4YOOetf88053215
+    - name: Accept
+      value: application/json
   auth: inherit
 
 settings:

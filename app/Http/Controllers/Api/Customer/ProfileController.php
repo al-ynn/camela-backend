@@ -36,6 +36,8 @@ class ProfileController extends Controller
 
             'email' => $request->email,
 
+            'phone' => $request->phone,
+
         ]);
 
         $user->refresh();

@@ -1,6 +1,7 @@
 info:
   name: Callback
   type: http
+  seq: 1
 
 http:
   method: GET

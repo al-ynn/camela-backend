@@ -16,8 +16,25 @@ class Category extends Model
 
         'image',
 
+        'banner',
+
+        'images',
+
+        'landing_page',
+
+        'sort_order',
+
+        'seo_title',
+
+        'seo_description',
+
         'is_active',
 
+    ];
+
+    protected $casts = [
+        'images' => 'array',
+        'is_active' => 'boolean',
     ];
 
     public function products()

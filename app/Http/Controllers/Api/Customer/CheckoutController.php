@@ -21,7 +21,13 @@ class CheckoutController extends Controller
     {
         $order = $this->checkoutService->checkout(
 
-            $request->user()
+            $request->user(),
+
+            $request->validated('payment_method'),
+
+            $request->validated('shipping_address_id'),
+
+            $request->validated('billing_address_id')
 
         );
 

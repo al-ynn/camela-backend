@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 
 use App\Http\Controllers\Api\Customer\ProfileController;
+use App\Http\Controllers\Api\Customer\AddressController;
 
 use App\Http\Controllers\Api\Payment\HitPayController;
 
@@ -53,6 +54,7 @@ Route::prefix('auth')->group(function () {
 */
 
 Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{category:slug}', [CategoryController::class, 'show']);
 
 /*
 |--------------------------------------------------------------------------
@@ -64,13 +66,11 @@ Route::get('/products/search', [PublicProductController::class, 'search']);
 
 Route::get('/products', [PublicProductController::class, 'index']);
 
+Route::get('/products/category/{category}', [PublicProductController::class, 'category']);
+
 Route::get('/products/{slug}', [PublicProductController::class, 'show']);
 
 Route::get('/products/{slug}/related', [PublicProductController::class, 'related']);
-
-Route::get('/products/{id}', [PublicProductController::class, 'show']);
-
-Route::get('/products/{id}/related', [PublicProductController::class, 'related']);
 
 /*
 |--------------------------------------------------------------------------
@@ -171,6 +171,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     );
 
+    Route::get('/addresses', [AddressController::class, 'index']);
+    Route::post('/addresses', [AddressController::class, 'store']);
+    Route::patch('/addresses/{address}', [AddressController::class, 'update']);
+    Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
+    Route::patch('/addresses/{address}/default', [AddressController::class, 'setDefault']);
+
 });
 
 /*
@@ -228,15 +234,6 @@ Route::middleware('auth:sanctum')
             '/orders/{order}',
             [CustomerOrderController::class, 'show']
         );
-
-        Route::get(
-
-            '/products/category/{category}',
-
-            [PublicProductController::class,'category']
-
-        );
-
 
     });
 
