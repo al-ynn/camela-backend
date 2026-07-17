@@ -5,310 +5,294 @@ namespace App\Services\Payment;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Config;
-
+use Illuminate\Support\Facades\Http;
 
 class HitPayService
 {
-    /**
-     * Create Payment
-     */
     public function createPayment(User $user)
     {
         $order = Order::where('user_id', $user->id)
-            ->where('payment_status', 'UNPAID')
+            ->whereIn('payment_status', ['UNPAID', 'PENDING'])
             ->latest()
             ->first();
 
         if (!$order) {
-
             return response()->json([
-
-                'message' => 'No pending order found.'
-
+                'message' => 'No unpaid order found.',
             ], 404);
-
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Temporary until client gives HitPay credentials
-        |--------------------------------------------------------------------------
-        */
+        $apiKey = config('services.hitpay.api_key');
+        $baseUrl = rtrim((string) config('services.hitpay.base_url', ''), '/');
+        $currency = config('services.hitpay.currency', 'PHP');
+        $webhookUrl = config('services.hitpay.webhook_url');
+        $successUrl = str_replace('{order_id}', (string) $order->id, (string) config('services.hitpay.success_url'));
+        $cancelUrl = str_replace('{order_id}', (string) $order->id, (string) config('services.hitpay.cancel_url'));
 
-        if (
-            empty(config('services.hitpay.api_key'))
-        ) {
-
+        if (empty($apiKey) || $baseUrl === '') {
             return response()->json([
-
-                'message' => 'HitPay is not configured yet.',
-
-                'order' => $order->order_number,
-
-                'amount' => $order->grand_total
-
-            ]);
-
+                'message' => 'HitPay is not configured.',
+                'errors' => [
+                    'api_key' => empty($apiKey) ? ['Missing HitPay API key.'] : [],
+                    'base_url' => $baseUrl === '' ? ['Missing HitPay base URL.'] : [],
+                ],
+            ], 422);
         }
-
-         /*
-        |--------------------------------------------------------------------------
-        | HitPay Payload
-        |--------------------------------------------------------------------------
-        */
 
         $payload = [
-
-            'amount' => $order->grand_total,
-
-            'currency' => 'PHP',
-
+            'amount' => (float) $order->grand_total,
+            'currency' => $currency,
             'email' => $user->email,
-
-            'reference_number' => $order->order_number,
-
             'name' => $user->name,
-
-            'redirect_url' => url('/api/payments/callback'),
-
-            'webhook' => url('/api/payments/webhook'),
-
+            'reference_number' => $order->order_number,
+            'redirect_url' => $successUrl,
+            'webhook' => $webhookUrl,
+            'cancel_url' => $cancelUrl,
         ];
 
-        /*
-        |--------------------------------------------------------------------------
-        | Send Request to HitPay
-        |--------------------------------------------------------------------------
-        */
-
-        $response = Http::withToken(
-
-            config('services.hitpay.api_key')
-
-        )->post(
-
-            config('services.hitpay.base_url') . '/v1/payment-requests',
-
-            $payload
-
-        );
+        $response = Http::withHeaders([
+            'X-BUSINESS-API-KEY' => $apiKey,
+            'Accept' => 'application/json',
+        ])->post($baseUrl . '/v1/payment-requests', $payload);
 
         if (!$response->successful()) {
-
             return response()->json([
-
                 'message' => 'Unable to create payment.',
-
                 'error' => $response->json(),
-
-            ], 500);
-
+            ], $response->status() ?: 500);
         }
+
+        $body = $response->json() ?? [];
+        $paymentRequestId = $body['id'] ?? $body['payment_request_id'] ?? null;
+        $paymentUrl = $body['url'] ?? $body['payment_url'] ?? null;
+
+        $order->update([
+            'payment_status' => 'PENDING',
+            'payment_method' => 'HITPAY',
+            'payment_request_id' => $paymentRequestId,
+            'hitpay_reference' => $paymentRequestId,
+            'gateway_response' => $body,
+            'payment_reference' => $paymentRequestId,
+        ]);
 
         return response()->json([
-
-            'payment_url' => $response['url'],
-
-            'payment_id' => $response['id'],
-
+            'payment_url' => $paymentUrl,
+            'payment_request_id' => $paymentRequestId,
+            'order_number' => $order->order_number,
+            'amount' => (string) $order->grand_total,
+            'currency' => $currency,
+            'payment_status' => 'pending',
         ]);
     }
-    
 
-    /**
-     * Webhook
-     */
     public function handleWebhook(Request $request)
     {
-
         if (!$this->verifyWebhook($request)) {
-
-            abort(403, 'Invalid webhook signature.');
-
+            return response()->json([
+                'message' => 'Invalid webhook signature.',
+            ], 403);
         }
-        /*
-        |--------------------------------------------------------------------------
-        | Get Payload
-        |--------------------------------------------------------------------------
-        */
 
         $payload = $request->all();
+        $paymentRequestId = $payload['reference_number'] ?? $payload['reference'] ?? null;
 
-        /*
-        |--------------------------------------------------------------------------
-        | Find Order
-        |--------------------------------------------------------------------------
-        */
-
-        $order = Order::where(
-
-            'order_number',
-
-            $payload['reference_number'] ?? ''
-
-        )->first();
-
-        if (!$order) {
-
+        if (!$paymentRequestId) {
             return response()->json([
-
-                'message' => 'Order not found.'
-
-            ], 404);
-
+                'message' => 'Missing payment reference.',
+            ], 400);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Update Status
-        |--------------------------------------------------------------------------
-        */
+        $order = Order::where('order_number', $paymentRequestId)
+            ->orWhere('payment_request_id', $paymentRequestId)
+            ->first();
 
-        DB::transaction(function () use ($order, $payload) {
+        if (!$order) {
+            return response()->json([
+                'message' => 'Order not found.',
+            ], 404);
+        }
 
-            switch ($payload['status'] ?? '') {
+        DB::transaction(function () use ($order, $payload, $paymentRequestId) {
+            $status = strtolower((string) ($payload['status'] ?? ''));
+            $paymentId = $payload['payment_id'] ?? $payload['transaction_id'] ?? $payload['id'] ?? null;
+            $responseBody = $payload;
 
+            $baseUpdate = [
+                'payment_request_id' => $paymentRequestId,
+                'hitpay_reference' => $paymentRequestId,
+                'transaction_reference' => $paymentId,
+                'callback_response' => $responseBody,
+                'payment_reference' => $paymentId ?: $paymentRequestId,
+                'payment_method' => 'HITPAY',
+            ];
+
+            switch ($status) {
                 case 'completed':
-
-                    $order->update([
-
+                case 'success':
+                    $order->update($baseUpdate + [
                         'payment_status' => 'PAID',
-
                         'order_status' => 'PROCESSING',
-
-                        'payment_reference' => $payload['payment_id'] ?? null,
-
                         'paid_at' => now(),
-
                     ]);
-
                     break;
 
                 case 'failed':
-
-                    $order->update([
-
+                    $order->update($baseUpdate + [
                         'payment_status' => 'FAILED',
-
                     ]);
-
                     break;
 
                 case 'cancelled':
-
-                    $order->update([
-
-                        'payment_status' => 'FAILED',
-
+                case 'canceled':
+                    $order->update($baseUpdate + [
+                        'payment_status' => 'CANCELLED',
                     ]);
+                    break;
 
+                case 'expired':
+                    $order->update($baseUpdate + [
+                        'payment_status' => 'EXPIRED',
+                    ]);
+                    break;
+
+                case 'pending':
+                    $order->update($baseUpdate + [
+                        'payment_status' => 'PENDING',
+                    ]);
+                    break;
+
+                default:
+                    $order->update($baseUpdate + [
+                        'gateway_response' => $responseBody,
+                    ]);
                     break;
             }
-
         });
 
         return response()->json([
-
-            'success' => true
-
+            'success' => true,
         ]);
     }
 
-    /**
-     * Callback
-     */
     public function handleCallback(Request $request)
     {
-        $reference = $request->get('reference_number');
+        $paymentRequestId = $request->get('reference')
+            ?? $request->get('reference_number')
+            ?? $request->get('payment_request_id');
 
-        if (!$reference) {
-
+        if (!$paymentRequestId) {
             return response()->json([
-
-                'message' => 'Missing reference number.'
-
+                'message' => 'Missing payment reference.',
             ], 400);
-
         }
 
-        $order = Order::where(
-
-            'order_number',
-
-            $reference
-
-        )->first();
+        $order = Order::where('payment_request_id', $paymentRequestId)
+            ->orWhere('order_number', $paymentRequestId)
+            ->first();
 
         if (!$order) {
-
             return response()->json([
-
-                'message' => 'Order not found.'
-
+                'message' => 'Order not found.',
             ], 404);
-
         }
 
-        return response()->json([
+        $statusFromQuery = strtolower((string) ($request->get('status') ?? ''));
+        $paymentData = $this->fetchPaymentRequest($paymentRequestId);
 
-            'message' => 'Payment callback received.',
+        if ($paymentData) {
+            $this->applyGatewayState($order, $paymentData);
+        }
 
-            'payment_status' => $order->payment_status,
+        if (in_array($order->payment_status, ['PAID'], true) || in_array($statusFromQuery, ['completed', 'success', 'paid'], true)) {
+            return redirect()->away($this->frontendUrl() . '/order-confirmation/' . $order->id);
+        }
 
-            'order_status' => $order->order_status,
+        if (in_array($statusFromQuery, ['failed', 'expired'], true) || in_array($order->payment_status, ['FAILED', 'EXPIRED'], true)) {
+            return redirect()->away($this->frontendUrl() . '/checkout?payment=' . strtolower((string) $order->payment_status));
+        }
 
-            'order_number' => $order->order_number,
+        if (in_array($statusFromQuery, ['cancelled', 'canceled'], true) || in_array($order->payment_status, ['CANCELLED'], true)) {
+            return redirect()->away($this->frontendUrl() . '/checkout?payment=cancelled');
+        }
 
-        ]);
+        return redirect()->away($this->frontendUrl() . '/checkout?payment=pending');
     }
 
-    private function verifyWebhook(
-        Request $request
-    ): bool {
+    private function fetchPaymentRequest(string $paymentRequestId): ?array
+    {
+        $apiKey = config('services.hitpay.api_key');
+        $baseUrl = rtrim((string) config('services.hitpay.base_url', ''), '/');
 
+        if (empty($apiKey) || $baseUrl === '') {
+            return null;
+        }
+
+        $response = Http::withHeaders([
+            'X-BUSINESS-API-KEY' => $apiKey,
+            'Accept' => 'application/json',
+        ])->get($baseUrl . '/v1/payment-requests/' . $paymentRequestId);
+
+        if (!$response->successful()) {
+            return null;
+        }
+
+        return $response->json() ?: null;
+    }
+
+    private function applyGatewayState(Order $order, array $paymentData): void
+    {
+        $status = strtolower((string) ($paymentData['status'] ?? ''));
+        $paymentId = $paymentData['payment_id'] ?? $paymentData['transaction_id'] ?? $paymentData['id'] ?? null;
+
+        $update = [
+            'gateway_response' => $paymentData,
+            'payment_request_id' => $paymentData['id'] ?? $order->payment_request_id,
+            'hitpay_reference' => $paymentData['reference_number'] ?? $order->hitpay_reference,
+            'transaction_reference' => $paymentId,
+            'payment_reference' => $paymentId ?: $order->payment_reference,
+            'payment_method' => 'HITPAY',
+        ];
+
+        if (in_array($status, ['completed', 'success', 'paid'], true)) {
+            $update['payment_status'] = 'PAID';
+            $update['order_status'] = 'PROCESSING';
+            $update['paid_at'] = $order->paid_at ?: now();
+        } elseif (in_array($status, ['failed'], true)) {
+            $update['payment_status'] = 'FAILED';
+        } elseif (in_array($status, ['cancelled', 'canceled'], true)) {
+            $update['payment_status'] = 'CANCELLED';
+        } elseif (in_array($status, ['expired'], true)) {
+            $update['payment_status'] = 'EXPIRED';
+        } elseif (in_array($status, ['pending'], true)) {
+            $update['payment_status'] = 'PENDING';
+        }
+
+        $order->update($update);
+    }
+
+    private function frontendUrl(): string
+    {
+        return rtrim((string) config('services.hitpay.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
+    }
+
+    private function verifyWebhook(Request $request): bool
+    {
         $salt = config('services.hitpay.salt');
 
         if (!$salt) {
-
-            /*
-            |--------------------------------------------------------------------------
-            | Development
-            |--------------------------------------------------------------------------
-            */
-
             return true;
-
         }
 
-        $signature = $request->header('Hmac');
+        $signature = $request->header('Hitpay-Signature') ?? $request->header('Hmac') ?? $request->header('X-HitPay-Signature');
 
         if (!$signature) {
-
             return false;
-
         }
 
         $payload = $request->getContent();
+        $expected = hash_hmac('sha256', $payload, $salt);
 
-        $expected = hash_hmac(
-
-            'sha256',
-
-            $payload,
-
-            $salt
-
-        );
-
-        return hash_equals(
-
-            $expected,
-
-            $signature
-
-        );
+        return hash_equals($expected, $signature);
     }
 }

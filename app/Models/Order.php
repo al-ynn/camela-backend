@@ -30,6 +30,16 @@ class Order extends Model
 
         'payment_method',
 
+        'payment_request_id',
+
+        'hitpay_reference',
+
+        'transaction_reference',
+
+        'gateway_response',
+
+        'callback_response',
+
         'shipping_address_id',
 
         'billing_address_id',
@@ -55,6 +65,10 @@ class Order extends Model
             'tax' => 'decimal:2',
 
             'grand_total' => 'decimal:2',
+
+            'gateway_response' => 'array',
+
+            'callback_response' => 'array',
 
 
         ];

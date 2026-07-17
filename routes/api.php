@@ -247,6 +247,11 @@ Route::middleware('auth:sanctum')
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::post(
+        '/payments/create',
+        [HitPayController::class, 'create']
+    );
+
+    Route::post(
         '/payments/hitpay',
         [HitPayController::class, 'create']
     );
