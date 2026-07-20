@@ -138,8 +138,6 @@ class CheckoutService
 
             }
 
-            $this->cartService->clear($user);
-
             return $order->load([
 
                 'items.product.images',

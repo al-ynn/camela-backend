@@ -77,7 +77,9 @@ class ProductResource extends JsonResource
 
             'image' => $primaryImage,
 
-            'images' => $images,
+'images' => $images,
+
+'debug' => $this->images,
 
         ];
     }

@@ -200,7 +200,7 @@ class ProductService
             $query->latest();
 
         }
-
+        
         return $query->paginate(12);
     }
 

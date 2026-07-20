@@ -53,6 +53,11 @@ return [
 
         'base_url' => env('HITPAY_API_URL', env('HITPAY_BASE_URL')),
 
+        'payment_methods' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('HITPAY_PAYMENT_METHODS', ''))
+        ))),
+
         'frontend_url' => env('HITPAY_FRONTEND_URL', env('FRONTEND_URL')),
 
     ],

@@ -4,9 +4,11 @@ namespace App\Services\Payment;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Models\CartItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class HitPayService
 {
@@ -26,9 +28,8 @@ class HitPayService
         $apiKey = config('services.hitpay.api_key');
         $baseUrl = rtrim((string) config('services.hitpay.base_url', ''), '/');
         $currency = config('services.hitpay.currency', 'PHP');
-        $webhookUrl = config('services.hitpay.webhook_url');
+        $paymentMethods = array_values(array_filter((array) config('services.hitpay.payment_methods', [])));
         $successUrl = str_replace('{order_id}', (string) $order->id, (string) config('services.hitpay.success_url'));
-        $cancelUrl = str_replace('{order_id}', (string) $order->id, (string) config('services.hitpay.cancel_url'));
 
         if (empty($apiKey) || $baseUrl === '') {
             return response()->json([
@@ -41,15 +42,18 @@ class HitPayService
         }
 
         $payload = [
-            'amount' => (float) $order->grand_total,
+            'amount' => number_format((float) $order->grand_total, 2, '.', ''),
             'currency' => $currency,
             'email' => $user->email,
             'name' => $user->name,
+            'purpose' => $order->order_number,
             'reference_number' => $order->order_number,
             'redirect_url' => $successUrl,
-            'webhook' => $webhookUrl,
-            'cancel_url' => $cancelUrl,
         ];
+
+        if (!empty($paymentMethods)) {
+            $payload['payment_methods'] = $paymentMethods;
+        }
 
         $response = Http::withHeaders([
             'X-BUSINESS-API-KEY' => $apiKey,
@@ -57,6 +61,14 @@ class HitPayService
         ])->post($baseUrl . '/v1/payment-requests', $payload);
 
         if (!$response->successful()) {
+            Log::warning('HitPay payment request failed', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'status' => $response->status(),
+                'response' => $response->json(),
+                'payment_methods' => $paymentMethods,
+            ]);
+
             return response()->json([
                 'message' => 'Unable to create payment.',
                 'error' => $response->json(),
@@ -82,6 +94,7 @@ class HitPayService
             'order_number' => $order->order_number,
             'amount' => (string) $order->grand_total,
             'currency' => $currency,
+            'payment_methods' => $paymentMethods,
             'payment_status' => 'pending',
         ]);
     }
@@ -135,6 +148,7 @@ class HitPayService
                         'order_status' => 'PROCESSING',
                         'paid_at' => now(),
                     ]);
+                    CartItem::where('user_id', $order->user_id)->delete();
                     break;
 
                 case 'failed':
@@ -258,6 +272,7 @@ class HitPayService
             $update['payment_status'] = 'PAID';
             $update['order_status'] = 'PROCESSING';
             $update['paid_at'] = $order->paid_at ?: now();
+            CartItem::where('user_id', $order->user_id)->delete();
         } elseif (in_array($status, ['failed'], true)) {
             $update['payment_status'] = 'FAILED';
         } elseif (in_array($status, ['cancelled', 'canceled'], true)) {

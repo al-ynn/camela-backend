@@ -41,8 +41,7 @@ class ProductSeeder extends Seeder
         ProductImage::updateOrCreate(
             ['product_id' => $product->id, 'is_primary' => true],
             [
-                'image_path' => 'products/hAYH8khXKhGeOjxMDApxQQejZ8oA6gjOJTYtYC3y.jpg',
-                'alt_text' => 'LivePure Molecular Hydrogen Bottle',
+                'image_path' => 'app/products/public/livepure-product.png',
                 'sort_order' => 0,
             ]
         );

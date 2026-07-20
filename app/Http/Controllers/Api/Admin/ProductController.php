@@ -8,6 +8,7 @@ use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\Product\ProductService;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
@@ -15,13 +16,10 @@ class ProductController extends Controller
         private ProductService $productService
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
         return ProductResource::collection(
-
-            $this->productService
-                ->getAll()
-
+            $this->productService->catalog($request->all())
         );
     }
 
