@@ -36,6 +36,12 @@ class CartController extends Controller
      */
     public function store(AddToCartRequest $request)
     {
+        if ($request->user()->email_verified_at === null) {
+            return response()->json([
+                'message' => 'Please verify your email before purchasing products.',
+            ], 403);
+        }
+
         $product = Product::findOrFail(
             $request->product_id
         );

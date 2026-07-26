@@ -141,11 +141,14 @@ class ProductService
         $product->delete();
     }
 
-    public function catalog(array $filters = [])
+    public function catalog(array $filters = [], bool $includeInactive = false)
     {
         $query = Product::query()
-            ->with(['category', 'images'])
-            ->where('status', 'ACTIVE');
+            ->with(['category', 'images']);
+
+        if (!$includeInactive) {
+            $query->where('status', 'ACTIVE');
+        }
 
         if (!empty($filters['search'])) {
 

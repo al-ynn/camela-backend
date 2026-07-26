@@ -4,8 +4,15 @@ info:
   seq: 1
 
 http:
-  method: GET
-  url: ""
+  method: POST
+  url: http://127.0.0.1:8000/api/auth/login
+  body:
+    type: json
+    data: |-
+      {
+        "email": "admin1@example.com",
+        "password": "password"
+      }
   auth: inherit
 
 settings:

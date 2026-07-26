@@ -98,36 +98,37 @@ class DashboardService
 
     private function revenue()
     {
-        $customers = User::selectRaw(
-                'MONTH(created_at) as month, COUNT(*) as customers'
-            )
+        $customers = User::where('role_id', 2)
+            ->selectRaw('MONTH(created_at) as month, COUNT(*) as customers')
             ->groupByRaw('MONTH(created_at)')
-            ->pluck('customers', 'month');
+            ->get()
+            ->keyBy('month');
 
-        return Order::selectRaw(
-
-                'MONTH(created_at) as month,
-                 SUM(grand_total) as revenue,
-                 COUNT(*) as orders'
-
-            )
+        return Order::selectRaw('
+                MONTH(created_at) as month,
+                SUM(grand_total) as revenue,
+                COUNT(*) as orders
+            ')
             ->groupByRaw('MONTH(created_at)')
             ->orderByRaw('MONTH(created_at)')
             ->get()
-            ->map(function ($row) {
+            ->map(function ($row) use ($customers) {
+
+                $customerCount = $customers->get($row->month);
 
                 return [
 
-                    'month'=>$row->month,
+                    'month' => date('M', mktime(0,0,0,$row->month,1)),
 
-                    'revenue'=>(float)$row->revenue,
+                    'revenue' => (float) $row->revenue,
 
-                    'orders'=>(int)$row->orders,
+                    'orders' => (int) $row->orders,
 
-                    'customers'=>(int) ($customers[$row->month] ?? 0)
+                    'customers' => $customerCount
+                        ? (int) $customerCount->customers
+                        : 0,
 
                 ];
-
             });
     }
 
@@ -139,41 +140,56 @@ class DashboardService
 
     private function categories()
     {
-        return Category::withCount('products')
+        return \App\Models\OrderItem::query()
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->selectRaw('
+                categories.name,
+                SUM(order_items.quantity) as value
+            ')
+            ->groupBy('categories.id', 'categories.name')
+            ->orderByDesc('value')
             ->get()
-            ->map(function ($category) {
-
+            ->map(function ($row) {
                 return [
-
-                    'name'=>$category->name,
-
-                    'value'=>$category->products_count
-
+                    'name' => $row->name,
+                    'value' => (int) $row->value,
                 ];
-
             });
     }
 
     private function weeklyRevenue()
     {
-        $customers = User::selectRaw(
-                'DATE(created_at) as date, COUNT(*) as customers'
-            )
+        $customers = User::where('role_id', 2)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as customers')
             ->groupByRaw('DATE(created_at)')
-            ->pluck('customers', 'date');
+            ->get()
+            ->keyBy('date');
 
-        return Order::selectRaw(
-                'DATE(created_at) as date, SUM(grand_total) as revenue, COUNT(*) as orders'
-            )
+        return Order::selectRaw('
+                DATE(created_at) as date,
+                SUM(grand_total) as revenue,
+                COUNT(*) as orders
+            ')
             ->groupByRaw('DATE(created_at)')
             ->orderByRaw('DATE(created_at)')
             ->get()
-            ->map(function ($row) {
+            ->map(function ($row) use ($customers) {
+
+                $customerCount = $customers->get($row->date);
+
                 return [
+
                     'month' => $row->date,
+
                     'revenue' => (float) $row->revenue,
+
                     'orders' => (int) $row->orders,
-                    'customers' => (int) ($customers[$row->date] ?? 0),
+
+                    'customers' => $customerCount
+                        ? (int) $customerCount->customers
+                        : 0,
+
                 ];
             });
     }

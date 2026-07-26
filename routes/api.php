@@ -25,6 +25,16 @@ use App\Http\Controllers\Api\Customer\AddressController;
 
 use App\Http\Controllers\Api\Payment\HitPayController;
 
+use App\Http\Controllers\Api\Admin\CustomerController;
+
+use App\Http\Controllers\Api\Admin\StoreSettingController;
+use App\Http\Controllers\Api\Admin\NotificationController;
+use App\Http\Controllers\Api\Customer\SettingController;
+use App\Http\Controllers\Api\MembershipApplicationController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route as FacadesRoute;
+use App\Models\User;
+
 /*
 |--------------------------------------------------------------------------
 | Authentication
@@ -46,6 +56,47 @@ Route::prefix('auth')->group(function () {
     });
 
 });
+
+/*
+|--------------------------------------------------------------------------
+| Email Verification (API)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::post('/email/verification/send', function (\Illuminate\Http\Request $request) {
+        $request->user()->sendEmailVerificationNotification();
+
+        return response()->json([
+            'message' => 'Verification email sent successfully.',
+        ]);
+    });
+
+    Route::post('/email/verification/resend', [AuthController::class, 'resendVerification'])
+        ->middleware('throttle:1,1');
+});
+
+Route::get('/email/verify/{id}/{hash}', function (Request $request) {
+    $user = User::findOrFail($request->route('id'));
+
+    if (! hash_equals((string) $request->route('hash'), sha1($user->getEmailForVerification()))) {
+        abort(403);
+    }
+
+    if ($request->hasValidSignature() && ! $user->hasVerifiedEmail()) {
+        $user->forceFill([
+            'email_verified_at' => now(),
+        ])->save();
+    }
+
+    $frontendUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/');
+    return redirect($frontendUrl . '/email-verified');
+})->middleware('signed')->name('verification.verify');
+
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/membership/apply', [MembershipApplicationController::class, 'store']);
 
 /*
 |--------------------------------------------------------------------------
@@ -93,6 +144,11 @@ Route::prefix('admin')
         Route::apiResource(
             'products',
             AdminProductController::class
+        );
+
+        Route::get(
+            'customers',
+            [CustomerController::class, 'index']
         );
 
         Route::get(
@@ -145,8 +201,31 @@ Route::prefix('admin')
             [AdminOrderController::class, 'updateStatus']
         );
 
-    });
+        Route::get(
+            'store-settings',
+            [StoreSettingController::class,'show']
+        );
 
+        Route::put(
+            'store-settings',
+            [StoreSettingController::class,'update']
+        );
+
+        Route::get(
+            'notifications',
+            [NotificationController::class, 'index']
+        );
+
+        Route::patch(
+            'notifications/{notification}/read',
+            [NotificationController::class, 'markAsRead']
+        );
+
+        Route::post(
+            'notifications/read-all',
+            [NotificationController::class, 'markAllAsRead']
+        );
+    }); 
 /*
 |--------------------------------------------------------------------------
 | Profile
@@ -235,8 +314,37 @@ Route::middleware('auth:sanctum')
             [CustomerOrderController::class, 'show']
         );
 
-    });
+        /*
+        |--------------------------------------------------------------------------
+        | Customer Settings
+        |--------------------------------------------------------------------------
+        */
 
+    Route::get(
+
+        '/settings',
+
+        [SettingController::class,'show']
+
+    );
+
+    Route::patch(
+
+        '/settings',
+
+        [SettingController::class,'update']
+
+    );
+
+    Route::patch(
+
+        '/settings/password',
+
+        [SettingController::class,'updatePassword']
+
+    );
+
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -267,3 +375,9 @@ Route::get(
     '/payments/callback',
     [HitPayController::class, 'callback']
 );
+
+Route::middleware('auth:sanctum')->get('/debug-user', function (\Illuminate\Http\Request $request) {
+    return response()->json([
+        'user' => $request->user(),
+    ]);
+});

@@ -46,11 +46,9 @@ return new class extends Migration
 
                 'ACTIVE',
 
-                'DRAFT',
-
-                'ARCHIVED'
-
-            ])->default('DRAFT');
+                'INACTIVE',
+                
+            ])->default('INACTIVE');
 
             $table->boolean('featured')->default(false);
 

@@ -25,7 +25,17 @@ class OrderItemResource extends JsonResource
 
             ),
 
-            'created_at' => $this->created_at,
+            'created_at' => $this->created_at
+                ? $this->created_at
+                    ->timezone('Asia/Singapore')
+                    ->format('Y-m-d H:i:s')
+                : null,
+
+            'updated_at' => $this->updated_at
+                ? $this->updated_at
+                    ->timezone('Asia/Singapore')
+                    ->format('Y-m-d H:i:s')
+                : null,
 
         ];
     }

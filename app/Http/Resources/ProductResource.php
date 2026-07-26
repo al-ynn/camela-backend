@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class ProductResource extends JsonResource
 {
@@ -14,11 +15,29 @@ class ProductResource extends JsonResource
      */
     public function toArray($request): array
     {
-        $images = $this->whenLoaded('images', function () {
+        $resolveImageUrl = function (?string $path): ?string {
+            if (!$path) {
+                return null;
+            }
+
+            if (preg_match('#^https?://#i', $path)) {
+                return $path;
+            }
+
+            $normalizedPath = ltrim($path, '/');
+
+            if (str_starts_with($normalizedPath, 'storage/')) {
+                $normalizedPath = substr($normalizedPath, 8);
+            }
+
+            return Storage::disk('public')->url($normalizedPath);
+        };
+
+        $images = $this->whenLoaded('images', function () use ($resolveImageUrl) {
             return $this->images
                 ->sortBy('sort_order')
-                ->map(function ($image) {
-                    return asset('storage/' . $image->image_path);
+                ->map(function ($image) use ($resolveImageUrl) {
+                    return $resolveImageUrl($image->image_path);
                 })
                 ->values();
         });
@@ -35,7 +54,7 @@ class ProductResource extends JsonResource
             }
 
             if ($primary) {
-                $primaryImage = asset('storage/' . $primary->image_path);
+                $primaryImage = $resolveImageUrl($primary->image_path);
             }
         }
 
@@ -56,7 +75,9 @@ class ProductResource extends JsonResource
                 : null,
 
             'category' => optional($this->category)->name,
+
             'category_slug' => optional($this->category)->slug,
+
             'category_landing_page' => optional($this->category)->landing_page,
 
             'description' => $this->description,
@@ -64,6 +85,8 @@ class ProductResource extends JsonResource
             'short_description' => $this->short_description,
 
             'stock' => $this->stock,
+
+            'low_stock' => $this->stock <= $this->low_stock_alert ? 1 : 0,
 
             'status' => $this->status,
 
@@ -77,9 +100,7 @@ class ProductResource extends JsonResource
 
             'image' => $primaryImage,
 
-'images' => $images,
-
-'debug' => $this->images,
+            'images' => $images,
 
         ];
     }

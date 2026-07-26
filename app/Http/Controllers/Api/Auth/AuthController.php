@@ -9,6 +9,7 @@ use App\Http\Resources\UserResource;
 use App\Services\Auth\AuthService;
 use Exception;
 use App\Http\Requests\Auth\RegisterRequest;
+use Illuminate\Support\Facades\Password;
 
 class AuthController extends Controller
 {
@@ -94,6 +95,80 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Logout successful.',
+        ]);
+    }
+
+    public function resendVerification(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Email is already verified.',
+            ]);
+        }
+
+        $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        if ($user->email !== $request->string('email')->toString()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email address does not match your account.',
+            ], 422);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Verification email sent successfully.',
+        ]);
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        try {
+            $this->authService->sendPasswordResetLink($request->string('email')->toString());
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password reset link sent successfully.',
+        ]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $data = $request->validate([
+            'token' => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        try {
+            $this->authService->resetPassword($data);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password has been reset successfully.',
         ]);
     }
 }

@@ -41,7 +41,7 @@ class ProductSeeder extends Seeder
         ProductImage::updateOrCreate(
             ['product_id' => $product->id, 'is_primary' => true],
             [
-                'image_path' => 'app/products/public/livepure-product.png',
+                'image_path' => 'products/livepure-product.png',
                 'sort_order' => 0,
             ]
         );

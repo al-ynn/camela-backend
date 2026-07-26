@@ -6,18 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Address;
+use App\Models\Setting;
+use App\Notifications\VerifyEmailNotification;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'role_id',
+        'is_active',
+        'last_login_at',
         'name',
         'username',
         'email',
@@ -35,6 +40,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -61,5 +68,42 @@ class User extends Authenticatable
     public function addresses(): HasMany
     {
         return $this->hasMany(Address::class);
+    }
+
+    public function getDisplayIdAttribute()
+    {
+        if ($this->role?->name === 'ADMIN') {
+
+            $number = User::whereHas('role', function ($q) {
+                $q->where('name', 'ADMIN');
+            })
+            ->where('id', '<=', $this->id)
+            ->count();
+
+            return 'A' . str_pad($number, 3, '0', STR_PAD_LEFT);
+        }
+
+        $number = User::whereHas('role', function ($q) {
+            $q->where('name', 'CUSTOMER');
+        })
+        ->where('id', '<=', $this->id)
+        ->count();
+
+        return 'C' . str_pad($number, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function setting()
+    {
+        return $this->hasOne(Setting::class);
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification);
+    }
+
+    public function hasVerifiedEmail(): bool
+    {
+        return ! is_null($this->email_verified_at);
     }
 }

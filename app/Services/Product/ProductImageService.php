@@ -42,16 +42,6 @@ class ProductImageService
                     'is_primary' => $product->images()->count() === 0,
 
                 ]);
-
-                if ($imageModel->is_primary) {
-
-                    $product->update([
-
-                        'thumbnail' => $path
-
-                    ]);
-
-                }
                 
             }
 
@@ -99,19 +89,7 @@ class ProductImageService
 
                     ]);
 
-                    $product->update([
-
-                        'thumbnail' => $newPrimary->image_path
-
-                    ]);
-
                 } else {
-
-                    $product->update([
-
-                        'thumbnail' => null
-
-                    ]);
 
                 }
 
@@ -138,12 +116,6 @@ class ProductImageService
             $image->update([
 
                 'is_primary' => true
-
-            ]);
-
-            $image->product()->update([
-
-                'thumbnail' => $image->image_path
 
             ]);
 

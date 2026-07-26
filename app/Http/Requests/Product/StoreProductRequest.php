@@ -75,9 +75,9 @@ class StoreProductRequest extends FormRequest
                 'numeric',
             ],
 
-            'status'=>[
+            'status' => [
                 'required',
-                'in:ACTIVE,DRAFT,ARCHIVED',
+                'in:ACTIVE,INACTIVE',
             ],
 
             'seo_title'=>[

@@ -75,9 +75,9 @@ class UpdateProductRequest extends FormRequest
                 'string'
             ],
 
-            'status'=>[
-                'sometimes',
-                'in:ACTIVE,DRAFT,ARCHIVED',
+            'status' => [
+                'required',
+                'in:ACTIVE,INACTIVE',
             ],
 
             'featured'=>[

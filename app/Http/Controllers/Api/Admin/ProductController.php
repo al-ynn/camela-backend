@@ -19,7 +19,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         return ProductResource::collection(
-            $this->productService->catalog($request->all())
+            $this->productService->catalog($request->all(), true)
         );
     }
 
