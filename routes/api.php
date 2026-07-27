@@ -122,6 +122,7 @@ Route::get('/products/category/{category}', [PublicProductController::class, 'ca
 Route::get('/products/{slug}', [PublicProductController::class, 'show']);
 
 Route::get('/products/{slug}/related', [PublicProductController::class, 'related']);
+Route::get('/store-status', [StoreSettingController::class, 'publicStatus']);
 
 /*
 |--------------------------------------------------------------------------

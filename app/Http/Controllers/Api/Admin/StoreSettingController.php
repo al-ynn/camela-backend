@@ -27,6 +27,22 @@ class StoreSettingController extends Controller
     }
 
     /**
+     * Get public store status for the customer-facing app.
+     */
+    public function publicStatus()
+    {
+        $settings = $this->storeSettingService->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'store_name' => $settings->store_name,
+                'maintenance_mode' => $settings->maintenance_mode,
+            ],
+        ]);
+    }
+
+    /**
      * Update Store Settings
      */
     public function update(Request $request)
