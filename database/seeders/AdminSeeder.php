@@ -25,5 +25,25 @@ class AdminSeeder extends Seeder
                 'password' => 'password',
             ]
         );
+
+        User::updateOrCreate(
+            ['email' => 'aleanaamura12@gmail.com'],
+            [
+                'role_id' => $adminRoleId,
+                'name' => 'Admin Amurao',
+                'username' => 'amurao',
+                'password' => 'Password1!',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'caspher207@gmail.com'],
+            [
+                'role_id' => $adminRoleId,
+                'name' => 'Admin Caspher',
+                'username' => 'caspher',
+                'password' => 'Password1!',
+            ]
+        );
     }
 }
