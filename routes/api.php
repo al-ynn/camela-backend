@@ -251,6 +251,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     );
 
+    Route::post(
+
+        '/profile/avatar',
+
+        [ProfileController::class,'updateAvatar']
+
+    );
+
     Route::get('/addresses', [AddressController::class, 'index']);
     Route::post('/addresses', [AddressController::class, 'store']);
     Route::patch('/addresses/{address}', [AddressController::class, 'update']);

@@ -10,7 +10,7 @@ use App\Services\Inventory\InventoryService;
 use App\Services\Cart\CartService;
 use App\Services\Notifications\AdminNotificationService;
 use App\Models\OrderItem;
-use App\Models\Setting;
+use App\Models\StoreSetting;
 
 class CheckoutService
 {
@@ -64,7 +64,7 @@ class CheckoutService
 
             });
 
-            $settings = Setting::firstOrFail();
+            $settings = StoreSetting::firstOrFail();
 
             /*
             |--------------------------------------------------------------------------
