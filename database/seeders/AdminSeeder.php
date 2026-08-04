@@ -45,5 +45,25 @@ class AdminSeeder extends Seeder
                 'password' => 'Password1!',
             ]
         );
+
+        User::updateOrCreate(
+            ['email' => 'deborah3915@gmail.com'],
+            [
+                'role_id' => $adminRoleId,
+                'name' => 'Admin Deborah',
+                'username' => '',
+                'password' => 'Password1!',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => '⁠Comidahealth77@gmail.com'],
+            [
+                'role_id' => $adminRoleId,
+                'name' => 'Admin Comidahealth',
+                'username' => 'Comidahealth',
+                'password' => 'Password1!',
+            ]
+        );
     }
 }

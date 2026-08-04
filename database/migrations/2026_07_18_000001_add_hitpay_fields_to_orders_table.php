@@ -17,20 +17,24 @@ return new class extends Migration
             $table->json('callback_response')->nullable()->after('gateway_response');
         });
 
-        DB::statement("
-            ALTER TABLE orders
-            MODIFY payment_status ENUM('UNPAID', 'PENDING', 'PAID', 'FAILED', 'CANCELLED', 'EXPIRED', 'REFUNDED')
-            NOT NULL DEFAULT 'UNPAID'
-        ");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("
+                ALTER TABLE orders
+                MODIFY payment_status ENUM('UNPAID', 'PENDING', 'PAID', 'FAILED', 'CANCELLED', 'EXPIRED', 'REFUNDED')
+                NOT NULL DEFAULT 'UNPAID'
+            ");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("
-            ALTER TABLE orders
-            MODIFY payment_status ENUM('UNPAID', 'PAID', 'FAILED', 'REFUNDED')
-            NOT NULL DEFAULT 'UNPAID'
-        ");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("
+                ALTER TABLE orders
+                MODIFY payment_status ENUM('UNPAID', 'PAID', 'FAILED', 'REFUNDED')
+                NOT NULL DEFAULT 'UNPAID'
+            ");
+        }
 
         Schema::table('orders', function (Blueprint $table) {
             $table->dropColumn([
