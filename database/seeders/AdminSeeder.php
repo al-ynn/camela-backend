@@ -27,7 +27,7 @@ class AdminSeeder extends Seeder
         );
 
         User::updateOrCreate(
-            ['email' => 'aleanaamura12@gmail.com'],
+            ['email' => 'aleanaamurao12@gmail.com'],
             [
                 'role_id' => $adminRoleId,
                 'name' => 'Admin Amurao',
