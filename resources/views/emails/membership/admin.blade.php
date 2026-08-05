@@ -24,6 +24,7 @@
                             <p style="margin:0 0 14px;line-height:1.7;font-size:15px;">A new membership application has been submitted.</p>
                             <div style="margin-top:18px;padding-top:18px;border-top:1px solid #e5e7eb;">
                                 <p style="margin:0 0 8px;line-height:1.7;font-size:15px;"><strong>Application ID:</strong> {{ $application['id'] }}</p>
+                                <p style="margin:0 0 8px;line-height:1.7;font-size:15px;"><strong>Application Type:</strong> {{ $application['application_type_label'] ?? 'Membership' }}</p>
                                 <p style="margin:0 0 8px;line-height:1.7;font-size:15px;"><strong>Name:</strong> {{ $application['full_name'] }}</p>
                                 <p style="margin:0 0 8px;line-height:1.7;font-size:15px;"><strong>Email:</strong> {{ $application['email'] }}</p>
                                 <p style="margin:0 0 8px;line-height:1.7;font-size:15px;"><strong>Phone:</strong> {{ $application['phone'] }}</p>

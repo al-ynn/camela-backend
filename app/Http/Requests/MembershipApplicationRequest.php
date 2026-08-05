@@ -14,6 +14,7 @@ class MembershipApplicationRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'application_type' => ['required', 'string', 'in:member,distribution-partner,importer'],
             'full_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],

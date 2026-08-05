@@ -22,6 +22,7 @@
                     <tr>
                         <td style="padding:32px;">
                             <p style="margin:0 0 14px;line-height:1.7;font-size:15px;">Thank you for applying, {{ $fullName }}.</p>
+                            <p style="margin:0 0 14px;line-height:1.7;font-size:15px;">You submitted an application for {{ $applicationTypeLabel }}.</p>
                             <p style="margin:0 0 14px;line-height:1.7;font-size:15px;">We have successfully received your membership application.</p>
                             <p style="margin:0;line-height:1.7;font-size:15px;">Our team will review it shortly.</p>
                         </td>

@@ -13,9 +13,22 @@ use Illuminate\Support\Facades\Mail;
 
 class MembershipApplicationController extends Controller
 {
+    private function getApplicationTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'member' => 'Member',
+            'distribution-partner' => 'Distribution Partner',
+            'importer' => 'Official Importer',
+            default => 'Membership',
+        };
+    }
+
     public function store(MembershipApplicationRequest $request)
     {
+        $applicationType = $request->string('application_type')->toString();
+
         $application = MembershipApplication::create([
+            'application_type' => $applicationType,
             'full_name' => $request->string('full_name')->toString(),
             'email' => $request->string('email')->toString(),
             'phone' => $request->string('phone')->toString(),
@@ -29,16 +42,21 @@ class MembershipApplicationController extends Controller
             Log::info('Sending membership confirmation', [
                 'email' => $application->email,
                 'application_id' => $application->id,
+                'application_type' => $applicationType,
             ]);
-            Mail::to($application->email)->send(new MembershipConfirmationMail($application->full_name));
+            Mail::to($application->email)->send(
+                new MembershipConfirmationMail($application->full_name, $this->getApplicationTypeLabel($applicationType))
+            );
             Log::info('Customer confirmation email sent', [
                 'email' => $application->email,
                 'application_id' => $application->id,
+                'application_type' => $applicationType,
             ]);
         } catch (\Throwable $e) {
             Log::error('Membership confirmation email failed', [
                 'email' => $application->email,
                 'application_id' => $application->id,
+                'application_type' => $applicationType,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -51,9 +69,12 @@ class MembershipApplicationController extends Controller
                 Log::info('Sending membership admin notification', [
                     'email' => $adminEmail,
                     'application_id' => $application->id,
+                    'application_type' => $applicationType,
                 ]);
                 Mail::to($adminEmail)->send(new MembershipAdminMail([
                     'id' => $application->id,
+                    'application_type' => $applicationType,
+                    'application_type_label' => $this->getApplicationTypeLabel($applicationType),
                     'full_name' => $application->full_name,
                     'email' => $application->email,
                     'phone' => $application->phone,
@@ -63,11 +84,13 @@ class MembershipApplicationController extends Controller
                 Log::info('Admin notification email sent', [
                     'email' => $adminEmail,
                     'application_id' => $application->id,
+                    'application_type' => $applicationType,
                 ]);
             } catch (\Throwable $e) {
                 Log::error('Membership admin notification failed', [
                     'email' => $adminEmail,
                     'application_id' => $application->id,
+                    'application_type' => $applicationType,
                     'message' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);

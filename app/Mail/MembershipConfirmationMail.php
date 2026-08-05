@@ -12,6 +12,7 @@ class MembershipConfirmationMail extends Mailable
 
     public function __construct(
         public string $fullName,
+        public string $applicationTypeLabel,
     ) {}
 
     public function build()
@@ -20,6 +21,7 @@ class MembershipConfirmationMail extends Mailable
             ->view('emails.membership.confirmation')
             ->with([
                 'fullName' => $this->fullName,
+                'applicationTypeLabel' => $this->applicationTypeLabel,
             ]);
     }
 }

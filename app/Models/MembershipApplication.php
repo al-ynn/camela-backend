@@ -10,6 +10,7 @@ class MembershipApplication extends Model
     use HasFactory;
 
     protected $fillable = [
+        'application_type',
         'full_name',
         'email',
         'phone',
