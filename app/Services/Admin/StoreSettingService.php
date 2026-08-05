@@ -16,7 +16,7 @@ class StoreSettingService
             [
                 'store_name' => 'Camela Group',
                 'tagline' => 'Science-Backed Wellness for Every Family',
-                'support_email' => 'info@camela.com.sg',
+                'support_email' => 'camela.trading@gmail.com',
                 'phone' => '+65-80641997',
                 'address' => 'Singapore',
 
