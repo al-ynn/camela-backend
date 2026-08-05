@@ -7,7 +7,6 @@ use App\Http\Requests\MembershipApplicationRequest;
 use App\Mail\MembershipAdminMail;
 use App\Mail\MembershipConfirmationMail;
 use App\Models\MembershipApplication;
-use App\Models\StoreSetting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -46,7 +45,7 @@ class MembershipApplicationController extends Controller
             $mailErrors[] = $e;
         }
 
-        $adminEmail = StoreSetting::query()->value('support_email') ?: config('mail.from.address');
+        $adminEmail = config('mail.application_to');
         if ($adminEmail) {
             try {
                 Log::info('Sending membership admin notification', [

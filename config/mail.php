@@ -115,4 +115,6 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    'application_to' => env('APPLICATION_MAIL_TO', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+
 ];
