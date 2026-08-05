@@ -123,13 +123,15 @@ class AuthService
 
     public function resetPassword(array $data): void
     {
+        $credentials = [
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'password_confirmation' => $data['password_confirmation'] ?? $data['passwordConfirmation'] ?? null,
+            'token' => $data['token'],
+        ];
+
         $status = Password::reset(
-            [
-                'email' => $data['email'],
-                'password' => $data['password'],
-                'password_confirmation' => $data['password_confirmation'],
-                'token' => $data['token'],
-            ],
+            $credentials,
             function (User $user, string $password) {
                 $user->forceFill([
                     'password' => Hash::make($password),
