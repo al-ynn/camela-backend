@@ -26,7 +26,6 @@ class ProductSeeder extends Seeder
                 'short_description' => 'A sample featured product for the molecular hydrogen collection.',
                 'description' => 'Sample product seeded for the frontend catalog and product detail pages.',
                 'price' => 199.00,
-                'compare_price' => 249.00,
                 'cost_price' => 120.00,
                 'stock' => 25,
                 'low_stock_alert' => 5,
