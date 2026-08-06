@@ -57,6 +57,14 @@ class OrderResource extends JsonResource
 
             ),
 
+            'shipping_address' => new AddressResource(
+                $this->whenLoaded('shippingAddress')
+            ),
+
+            'billing_address' => new AddressResource(
+                $this->whenLoaded('billingAddress')
+            ),
+
             'created_at' => $this->created_at,
 
             'updated_at' => $this->updated_at,

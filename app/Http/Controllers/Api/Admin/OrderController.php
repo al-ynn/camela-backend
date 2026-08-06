@@ -22,7 +22,9 @@ class OrderController extends Controller
         $orders = Order::latest()
             ->with([
                 'user',
-                'items.product.images'
+                'items.product.images',
+                'shippingAddress',
+                'billingAddress'
             ])
             ->paginate(15);
 
@@ -37,7 +39,9 @@ class OrderController extends Controller
         return new OrderResource(
             $order->load([
                 'user',
-                'items.product.images'
+                'items.product.images',
+                'shippingAddress',
+                'billingAddress'
             ])
         );
     }
