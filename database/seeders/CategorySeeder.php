@@ -20,9 +20,9 @@ class CategorySeeder extends Seeder
         Category::updateOrCreate(['slug' => 'molecular-hydrogen'], [
             'name' => 'Molecular Hydrogen',
             'description' => 'Discover our molecular hydrogen wellness range.',
-            'image' => 'storage\products\molecular-hydrogen.jpeg',
-            'banner' => 'storage\products\molecular-hydrogen.jpeg',
-            'images' => ['storage\products\molecular-hydrogen.jpeg'],
+            'image' => 'storage/products/molecular-hydrogen.jpeg',
+            'banner' => 'storage/products/molecular-hydrogen.jpeg',
+            'images' => ['storage/products/molecular-hydrogen.jpeg'],
             'landing_page' => '/molecular-hydrogen',
             'sort_order' => 1,
             'seo_title' => 'Molecular Hydrogen',
