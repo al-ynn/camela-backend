@@ -65,5 +65,15 @@ class AdminSeeder extends Seeder
                 'password' => 'Password1!',
             ]
         );
+
+        User::updateOrCreate(
+            ['email' => 'Victorlyp@hotmail.com'],
+            [
+                'role_id' => $adminRoleId,
+                'name' => 'Admin Victorlyp',
+                'username' => 'Victorlyp',
+                'password' => 'Password1!',
+            ]
+        );
     }
 }
