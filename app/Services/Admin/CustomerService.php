@@ -50,11 +50,11 @@ class CustomerService
 
                     'address' => $defaultAddress
                         ? collect([
-                            $defaultAddress->street,
-                            $defaultAddress->barangay,
+                            $defaultAddress->address,
                             $defaultAddress->city,
-                            $defaultAddress->province,
-                            $defaultAddress->postal_code,
+                            $defaultAddress->state,
+                            $defaultAddress->zip_code,
+                            $defaultAddress->country,
                         ])->filter()->implode(', ')
                         : '-',
 

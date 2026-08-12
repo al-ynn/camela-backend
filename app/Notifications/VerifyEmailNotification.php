@@ -31,7 +31,7 @@ class VerifyEmailNotification extends Notification
             ->subject('Verify your Camela Group account')
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line('Thank you for creating a Camela Group account.')
-            ->line('To protect your account and enable secure purchasing, please verify your email address.')
+            ->line('For additional account security, you may verify your email address.')
             ->action('Verify Email', $verificationUrl)
             ->line('If you did not create this account, you may safely ignore this email.')
             ->salutation('Regards, Camela Group');

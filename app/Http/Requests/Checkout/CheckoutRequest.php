@@ -46,6 +46,8 @@ class CheckoutRequest extends FormRequest
 
             'billing_address_id' => ['nullable', 'integer', Rule::exists('addresses', 'id')->where('user_id', $this->user()->id)],
 
+            'shipping_method' => ['nullable', Rule::in(['standard', 'express', 'overnight'])],
+
             'notes' => [
 
                 'nullable',

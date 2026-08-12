@@ -38,6 +38,11 @@ class StoreSettingController extends Controller
             'data' => [
                 'store_name' => $settings->store_name,
                 'maintenance_mode' => $settings->maintenance_mode,
+                'standard_shipping' => $settings->standard_shipping,
+                'express_shipping' => $settings->express_shipping,
+                'overnight_shipping' => $settings->overnight_shipping,
+                'free_shipping_threshold' => $settings->free_shipping_threshold,
+                'tax_rate' => $settings->tax_rate,
             ],
         ]);
     }

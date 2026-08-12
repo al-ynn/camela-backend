@@ -3,9 +3,12 @@
 namespace App\Services\Product;
 
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class ProductService
 {
@@ -139,6 +142,158 @@ class ProductService
     public function delete(Product $product): void
     {
         $product->delete();
+    }
+
+    public function duplicate(Product $product): Product
+    {
+        return $this->duplicateMany(new Collection([$product]))->first();
+    }
+
+    public function duplicateByIds(array $productIds): Collection
+    {
+        $products = Product::query()
+            ->with('images')
+            ->whereKey($productIds)
+            ->get();
+
+        return $this->duplicateMany($products);
+    }
+
+    public function updateStatusByIds(array $productIds, string $status): Collection
+    {
+        return DB::transaction(function () use ($productIds, $status) {
+            $products = Product::query()
+                ->whereKey($productIds)
+                ->lockForUpdate()
+                ->get();
+
+            if ($products->pluck('status')->unique()->count() !== 1) {
+                throw ValidationException::withMessages([
+                    'product_ids' => 'Only products with the same status can be updated together.',
+                ]);
+            }
+
+            Product::whereKey($productIds)->update(['status' => $status]);
+
+            return Product::with(['category', 'images'])
+                ->whereKey($productIds)
+                ->get();
+        });
+    }
+
+    private function duplicateMany(Collection $products): Collection
+    {
+        $copiedImagePaths = [];
+
+        try {
+            return DB::transaction(function () use ($products, &$copiedImagePaths) {
+                return $products->map(function (Product $source) use (&$copiedImagePaths) {
+                    $source->loadMissing('images');
+                    $title = $this->uniqueCopyTitle($source->title);
+
+                    $duplicate = Product::create([
+                        'category_id' => $source->category_id,
+                        'title' => $title,
+                        'slug' => $this->uniqueSlug($title),
+                        'sku' => $this->uniqueCopySku($source->sku),
+                        'short_description' => $source->short_description,
+                        'description' => $source->description,
+                        'price' => $source->price,
+                        'compare_price' => $source->compare_price,
+                        'cost_price' => $source->cost_price,
+                        'stock' => $source->stock,
+                        'low_stock_alert' => $source->low_stock_alert,
+                        'weight' => $source->weight,
+                        'status' => $source->status,
+                        'featured' => $source->featured,
+                        'seo_title' => $source->seo_title,
+                        'seo_description' => $source->seo_description,
+                    ]);
+
+                    foreach ($source->images as $image) {
+                        $newPath = $this->copyProductImage($image->image_path);
+                        $copiedImagePaths[] = $newPath;
+
+                        $duplicate->images()->create([
+                            'image_path' => $newPath,
+                            'alt_text' => $image->alt_text,
+                            'sort_order' => $image->sort_order,
+                            'is_primary' => $image->is_primary,
+                        ]);
+                    }
+
+                    return $duplicate->load(['category', 'images']);
+                });
+            });
+        } catch (\Throwable $exception) {
+            if ($copiedImagePaths !== []) {
+                Storage::disk('public')->delete($copiedImagePaths);
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function uniqueCopyTitle(string $title): string
+    {
+        $base = preg_replace('/ \(Copy(?: \d+)?\)$/', '', $title) ?: $title;
+        $number = 1;
+
+        do {
+            $suffix = $number === 1 ? ' (Copy)' : " (Copy {$number})";
+            $candidate = Str::limit($base, 255 - strlen($suffix), '') . $suffix;
+            $number++;
+        } while (Product::where('title', $candidate)->exists());
+
+        return $candidate;
+    }
+
+    private function uniqueCopySku(string $sku): string
+    {
+        $base = preg_replace('/-COPY(?:-\d+)?$/i', '', $sku) ?: $sku;
+        $number = 1;
+
+        do {
+            $suffix = $number === 1 ? '-COPY' : "-COPY-{$number}";
+            $candidate = Str::limit($base, 255 - strlen($suffix), '') . $suffix;
+            $number++;
+        } while (Product::where('sku', $candidate)->exists());
+
+        return $candidate;
+    }
+
+    private function uniqueSlug(string $title): string
+    {
+        $base = Str::limit(Str::slug($title), 240, '');
+        $candidate = $base;
+        $number = 2;
+
+        while (Product::where('slug', $candidate)->exists()) {
+            $candidate = "{$base}-{$number}";
+            $number++;
+        }
+
+        return $candidate;
+    }
+
+    private function copyProductImage(string $path): string
+    {
+        $disk = Storage::disk('public');
+
+        if (!$disk->exists($path)) {
+            throw new RuntimeException('A product image could not be copied.');
+        }
+
+        $extension = pathinfo($path, PATHINFO_EXTENSION);
+        $newPath = 'products/' . pathinfo($path, PATHINFO_FILENAME)
+            . '-copy-' . Str::uuid()
+            . ($extension ? ".{$extension}" : '');
+
+        if (!$disk->copy($path, $newPath)) {
+            throw new RuntimeException('A product image could not be copied.');
+        }
+
+        return $newPath;
     }
 
     public function catalog(array $filters = [], bool $includeInactive = false)

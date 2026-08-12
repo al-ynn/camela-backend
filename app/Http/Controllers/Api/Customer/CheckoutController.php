@@ -19,13 +19,6 @@ class CheckoutController extends Controller
         CheckoutRequest $request
     )
     {
-        if ($request->user()->email_verified_at === null) {
-            return response()->json([
-                'message' => 'Email Verification Required',
-                'detail' => 'Before placing your first order, please verify your email address.',
-            ], 403);
-        }
-
         $order = $this->checkoutService->checkout(
 
             $request->user(),
@@ -34,7 +27,9 @@ class CheckoutController extends Controller
 
             $request->validated('shipping_address_id'),
 
-            $request->validated('billing_address_id')
+            $request->validated('billing_address_id'),
+
+            $request->validated('shipping_method') ?? 'standard'
 
         );
 

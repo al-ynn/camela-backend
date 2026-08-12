@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\BulkDuplicateProductsRequest;
+use App\Http\Requests\Product\BulkUpdateProductStatusRequest;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
@@ -76,6 +78,29 @@ class ProductController extends Controller
             'message'=>'Product deleted.'
 
         ]);
+    }
+
+    public function duplicate(Product $product)
+    {
+        $duplicate = $this->productService->duplicate($product);
+
+        return new ProductResource($duplicate);
+    }
+
+    public function bulkDuplicate(BulkDuplicateProductsRequest $request)
+    {
+        return ProductResource::collection(
+            $this->productService->duplicateByIds($request->validated('product_ids'))
+        );
+    }
+
+    public function bulkStatus(BulkUpdateProductStatusRequest $request)
+    {
+        $data = $request->validated();
+
+        return ProductResource::collection(
+            $this->productService->updateStatusByIds($data['product_ids'], $data['status'])
+        );
     }
 
     public function category($category)

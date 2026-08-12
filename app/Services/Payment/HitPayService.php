@@ -296,7 +296,7 @@ class HitPayService
         $salt = config('services.hitpay.salt');
 
         if (!$salt) {
-            return true;
+            return false;
         }
 
         $signature = $request->header('Hitpay-Signature') ?? $request->header('Hmac') ?? $request->header('X-HitPay-Signature');

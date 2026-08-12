@@ -9,3 +9,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('users:disable-inactive')
     ->daily();
+
+Schedule::command('customer-reminders:send')
+    ->dailyAt('09:00')
+    ->withoutOverlapping();

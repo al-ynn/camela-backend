@@ -24,9 +24,9 @@ class CheckoutService
 
     ) {}
 
-    public function checkout(User $user, string $paymentMethod, ?int $shippingAddressId = null, ?int $billingAddressId = null): Order
+    public function checkout(User $user, string $paymentMethod, ?int $shippingAddressId = null, ?int $billingAddressId = null, string $shippingMethod = 'standard'): Order
     {
-        return DB::transaction(function () use ($user, $paymentMethod, $shippingAddressId, $billingAddressId) {
+        return DB::transaction(function () use ($user, $paymentMethod, $shippingAddressId, $billingAddressId, $shippingMethod) {
 
             // Load customer's cart
             $items = $user
@@ -48,10 +48,10 @@ class CheckoutService
 
                 if ($item->product->stock < $item->quantity) {
 
-                    throw new \Exception(
-
-                        "{$item->product->title} has insufficient stock."
-
+                    throw new HttpResponseException(
+                        response()->json([
+                            'message' => "{$item->product->title} has insufficient stock.",
+                        ], 422)
                     );
 
                 }
@@ -64,6 +64,8 @@ class CheckoutService
 
             });
 
+            $totalQuantity = (int) $items->sum('quantity');
+
             $settings = StoreSetting::firstOrFail();
 
             /*
@@ -72,24 +74,24 @@ class CheckoutService
             |--------------------------------------------------------------------------
             */
 
-            $shippingMethod = request('shipping_method', 'standard');
-
             switch ($shippingMethod) {
 
                 case 'express':
-                    $shipping = $settings->express_shipping;
+                    $shippingRate = $settings->express_shipping;
                     break;
 
                 case 'overnight':
-                    $shipping = $settings->overnight_shipping;
+                    $shippingRate = $settings->overnight_shipping;
                     break;
 
                 default:
-                    $shipping =
-                        $subtotal >= $settings->free_shipping_threshold
-                            ? 0
-                            : $settings->standard_shipping;
+                    $shippingRate = $settings->standard_shipping;
             }
+
+            $shipping = $shippingMethod === 'standard'
+                && $subtotal >= $settings->free_shipping_threshold
+                    ? 0
+                    : round((float) $shippingRate * $totalQuantity, 2);
             /*
             |--------------------------------------------------------------------------
             | Discount

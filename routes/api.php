@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\Public\ProductController as PublicProductController;
 
 use App\Http\Controllers\Api\Public\CategoryController;
+use App\Http\Controllers\Api\Public\CurrencyController;
 
 use App\Http\Controllers\Api\Admin\ProductImageController;
 use App\Http\Controllers\Api\Admin\InventoryController;
@@ -43,9 +44,11 @@ use App\Models\User;
 
 Route::prefix('auth')->group(function () {
 
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:10,1');
 
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])
+        ->middleware('throttle:5,1');
 
     Route::middleware('auth:sanctum')->group(function () {
 
@@ -94,8 +97,10 @@ Route::get('/email/verify/{id}/{hash}', function (Request $request) {
     return redirect($frontendUrl . '/email-verified');
 })->middleware('signed')->name('verification.verify');
 
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+    ->middleware('throttle:5,1');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+    ->middleware('throttle:5,1');
 Route::post('/membership/apply', [MembershipApplicationController::class, 'store']);
 
 /*
@@ -106,6 +111,7 @@ Route::post('/membership/apply', [MembershipApplicationController::class, 'store
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category:slug}', [CategoryController::class, 'show']);
+Route::get('/currencies', CurrencyController::class);
 
 /*
 |--------------------------------------------------------------------------
@@ -131,7 +137,7 @@ Route::get('/store-status', [StoreSettingController::class, 'publicStatus']);
 */
 
 Route::prefix('admin')
-    ->middleware('auth:sanctum')
+    ->middleware(['auth:sanctum', 'admin'])
     ->group(function () {
 
         Route::get(
@@ -140,6 +146,21 @@ Route::prefix('admin')
 
             [DashboardController::class,'index']
 
+        );
+
+        Route::post(
+            'products/bulk-duplicate',
+            [AdminProductController::class, 'bulkDuplicate']
+        );
+
+        Route::patch(
+            'products/bulk-status',
+            [AdminProductController::class, 'bulkStatus']
+        );
+
+        Route::post(
+            'products/{product}/duplicate',
+            [AdminProductController::class, 'duplicate']
         );
 
         Route::apiResource(

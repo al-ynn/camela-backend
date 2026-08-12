@@ -20,7 +20,9 @@ class OrderController extends Controller
             ->orders()
             ->latest()
             ->with([
-                'items.product.images'
+                'items.product.images',
+                'shippingAddress',
+                'billingAddress'
             ])
             ->paginate(10);
 
@@ -41,7 +43,11 @@ class OrderController extends Controller
 
             'items.product.images',
 
-            'user'
+            'user',
+
+            'shippingAddress',
+
+            'billingAddress'
 
         ]);
 

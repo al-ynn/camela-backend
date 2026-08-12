@@ -24,6 +24,7 @@ class ProfileController extends Controller
     )
     {
         $user = $request->user();
+        $emailChanged = $user->email !== $request->email;
 
         $user->update([
 
@@ -40,6 +41,12 @@ class ProfileController extends Controller
             'phone' => $request->phone,
 
         ]);
+
+        if ($emailChanged) {
+            $user->forceFill([
+                'email_verified_at' => null,
+            ])->save();
+        }
 
         $user->refresh();
 

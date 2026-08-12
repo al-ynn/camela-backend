@@ -40,6 +40,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'verification_reminder_sent_at' => 'datetime',
+            'cart_activity_at' => 'datetime',
+            'abandoned_cart_reminder_activity_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',

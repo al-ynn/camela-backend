@@ -6,6 +6,7 @@ use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class CartService
 {
@@ -30,10 +31,26 @@ class CartService
 
             if ($item) {
 
+                if ($item->quantity + $quantity > $product->stock) {
+                    throw new HttpResponseException(
+                        response()->json([
+                            'message' => 'Requested quantity exceeds available stock.',
+                        ], 422)
+                    );
+                }
+
                 $item->increment('quantity', $quantity);
 
                 return $item->fresh();
 
+            }
+
+            if ($quantity > $product->stock) {
+                throw new HttpResponseException(
+                    response()->json([
+                        'message' => 'Requested quantity exceeds available stock.',
+                    ], 422)
+                );
             }
 
             return CartItem::create([

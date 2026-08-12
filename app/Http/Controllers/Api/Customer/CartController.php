@@ -36,12 +36,6 @@ class CartController extends Controller
      */
     public function store(AddToCartRequest $request)
     {
-        if ($request->user()->email_verified_at === null) {
-            return response()->json([
-                'message' => 'Please verify your email before purchasing products.',
-            ], 403);
-        }
-
         $product = Product::findOrFail(
             $request->product_id
         );
@@ -71,6 +65,14 @@ class CartController extends Controller
         CartItem $cartItem
     )
     {
+        abort_unless($cartItem->user_id === $request->user()->id, 404);
+
+        if ($request->quantity > $cartItem->product->stock) {
+            return response()->json([
+                'message' => 'Requested quantity exceeds available stock.',
+            ], 422);
+        }
+
         $item = $this->cartService->update(
 
             $cartItem,
@@ -90,9 +92,12 @@ class CartController extends Controller
      * Remove Item
      */
     public function destroy(
+        Request $request,
         CartItem $cartItem
     )
     {
+        abort_unless($cartItem->user_id === $request->user()->id, 404);
+
         $this->cartService
             ->remove($cartItem);
 
