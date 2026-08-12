@@ -202,6 +202,9 @@ class CheckoutService
                 '/admin/orders'
             );
 
+            // Clear cart after successful checkout
+            $this->cartService->clear($user);
+
             return $order;
 
         });

@@ -10,6 +10,8 @@ use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -46,6 +48,61 @@ class CustomerAccessTest extends TestCase
             'shipping_method' => 'standard',
         ])->assertCreated()
             ->assertJsonMissing(['message' => 'Email Verification Required']);
+    }
+
+    public function test_unverified_customer_can_view_update_and_remove_cart_items(): void
+    {
+        $customer = $this->customer('unverified-cart@example.com');
+        $product = $this->product(stock: 5);
+        Sanctum::actingAs($customer);
+
+        $this->postJson('/api/cart', [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ])->assertSuccessful();
+
+        $item = CartItem::where('user_id', $customer->id)->firstOrFail();
+        $this->getJson('/api/cart')->assertSuccessful();
+        $this->patchJson("/api/cart/{$item->id}", ['quantity' => 3])
+            ->assertSuccessful();
+        $this->assertDatabaseHas('cart_items', ['id' => $item->id, 'quantity' => 3]);
+
+        $this->deleteJson("/api/cart/{$item->id}")->assertSuccessful();
+        $this->assertDatabaseMissing('cart_items', ['id' => $item->id]);
+    }
+
+    public function test_verified_customer_retains_normal_cart_access(): void
+    {
+        $customer = $this->customer('verified@example.com');
+        $customer->forceFill(['email_verified_at' => now()])->save();
+        Sanctum::actingAs($customer);
+
+        $this->postJson('/api/cart', [
+            'product_id' => $this->product()->id,
+            'quantity' => 1,
+        ])->assertSuccessful();
+
+        $this->assertDatabaseHas('cart_items', ['user_id' => $customer->id]);
+    }
+
+    public function test_verification_notification_and_signed_link_still_work(): void
+    {
+        Notification::fake();
+        $customer = $this->customer('verification-still-works@example.com');
+        Sanctum::actingAs($customer);
+
+        $this->postJson('/api/email/verification/resend', [
+            'email' => $customer->email,
+        ])->assertSuccessful();
+        Notification::assertSentTo($customer, \App\Notifications\VerifyEmailNotification::class);
+
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $customer->id, 'hash' => sha1($customer->email)]
+        );
+        $this->get($verificationUrl)->assertRedirect();
+        $this->assertNotNull($customer->fresh()->email_verified_at);
     }
 
     public function test_customer_cannot_modify_another_customers_cart_item(): void
