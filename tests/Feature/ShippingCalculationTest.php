@@ -98,7 +98,7 @@ class ShippingCalculationTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
     }
 
-    public function test_existing_free_standard_shipping_threshold_remains_active(): void
+    public function test_standard_shipping_does_not_become_free_at_the_legacy_threshold(): void
     {
         StoreSetting::query()->update(['free_shipping_threshold' => 20]);
         $user = $this->customer();
@@ -106,7 +106,7 @@ class ShippingCalculationTest extends TestCase
 
         $order = $this->checkout($user);
 
-        $this->assertSame('0.00', $order->shipping_fee);
+        $this->assertSame('24.00', $order->shipping_fee);
     }
 
     public function test_unknown_shipping_method_is_rejected(): void

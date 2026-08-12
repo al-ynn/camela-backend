@@ -88,10 +88,7 @@ class CheckoutService
                     $shippingRate = $settings->standard_shipping;
             }
 
-            $shipping = $shippingMethod === 'standard'
-                && $subtotal >= $settings->free_shipping_threshold
-                    ? 0
-                    : round((float) $shippingRate * $totalQuantity, 2);
+            $shipping = round((float) $shippingRate * $totalQuantity, 2);
             /*
             |--------------------------------------------------------------------------
             | Discount

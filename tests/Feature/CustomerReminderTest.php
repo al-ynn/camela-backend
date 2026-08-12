@@ -39,7 +39,7 @@ class CustomerReminderTest extends TestCase
     public function test_recent_unverified_customer_receives_no_reminder(): void
     {
         Notification::fake();
-        $user = $this->customer(verified: false, createdAt: now()->subDays(2));
+        $user = $this->customer(verified: false, createdAt: now()->subDays(3)->addMinute());
 
         $this->artisan('customer-reminders:send')->assertSuccessful();
 
@@ -63,6 +63,18 @@ class CustomerReminderTest extends TestCase
     {
         Notification::fake();
         $this->customer(verified: true, createdAt: now()->subDays(4));
+
+        $this->artisan('customer-reminders:send')->assertSuccessful();
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_inactive_customer_receives_no_reminders(): void
+    {
+        Notification::fake();
+        $user = $this->customer(verified: false, createdAt: now()->subDays(4));
+        $this->cartItem($user, now()->subDays(4));
+        $user->forceFill(['is_active' => false])->save();
 
         $this->artisan('customer-reminders:send')->assertSuccessful();
 
@@ -165,6 +177,24 @@ class CustomerReminderTest extends TestCase
         Notification::assertSentToTimes($user, AbandonedCartReminderNotification::class, 2);
     }
 
+    public function test_removing_an_item_resets_timer_when_other_items_remain(): void
+    {
+        Notification::fake();
+        $user = $this->customer();
+        $removedItem = $this->cartItem($user, now()->subDays(4));
+        $this->cartItem($user, now()->subDays(4));
+
+        $removedItem->delete();
+        $this->artisan('customer-reminders:send')->assertSuccessful();
+
+        Notification::assertNothingSent();
+
+        Carbon::setTestNow(now()->addDays(3));
+        $this->artisan('customer-reminders:send')->assertSuccessful();
+
+        Notification::assertSentToTimes($user, AbandonedCartReminderNotification::class, 1);
+    }
+
     public function test_one_failed_cart_email_does_not_stop_other_customers(): void
     {
         $failed = $this->customer(email: 'fail-cart@example.com');
@@ -204,7 +234,7 @@ class CustomerReminderTest extends TestCase
 
     public function test_email_content_uses_secure_existing_links_and_no_prices_or_credentials(): void
     {
-        config(['services.hitpay.frontend_url' => 'https://shop.example.com']);
+        config(['services.frontend_url' => 'https://shop.example.com']);
         $user = $this->customer(verified: false, createdAt: now()->subDays(4));
 
         $verificationMail = (new UnverifiedAccountReminderNotification)->toMail($user);

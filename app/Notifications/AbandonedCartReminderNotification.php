@@ -19,7 +19,7 @@ class AbandonedCartReminderNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $frontendUrl = rtrim((string) (config('services.hitpay.frontend_url') ?: config('app.url')), '/');
+        $frontendUrl = rtrim((string) config('services.frontend_url', config('app.url')), '/');
 
         return (new MailMessage)
             ->subject('You still have items in your Camela Group cart')
